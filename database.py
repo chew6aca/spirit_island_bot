@@ -16,7 +16,9 @@ class SpiritOrm(Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     type: Mapped[str]
     name: Mapped[str]
-    difficulty: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, default=None)
+    difficulty: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True, default=None
+    )
     source: Mapped[str]
     picture: Mapped[str]
 

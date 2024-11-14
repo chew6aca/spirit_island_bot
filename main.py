@@ -1,16 +1,23 @@
-from contextlib import asynccontextmanager
-from fastapi import FastAPI
+import asyncio
+import os
+from aiogram import Bot, Dispatcher
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.methods import DeleteWebhook
+from dotenv import load_dotenv
 
-from database import create_tables, delete_tables
-from router import router as spirit_router
+import spirit_handler
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    await create_tables()
-    print('Database created')
-    yield
-    await delete_tables()
-    print('Database erased')
+load_dotenv()
+TOKEN = os.getenv('TOKEN')
+dp = Dispatcher(storage=MemoryStorage())
+bot = Bot(token=TOKEN)
 
-app = FastAPI()
-app.include_router(spirit_router)
+
+async def main():
+    await bot(DeleteWebhook(drop_pending_updates=True))
+    dp.include_routers(spirit_handler.router,)
+    await dp.start_polling(bot)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
