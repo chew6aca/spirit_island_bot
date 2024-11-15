@@ -1,7 +1,8 @@
 from typing import Optional
+
+from sqlalchemy import String
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import String
 
 engine = create_async_engine("sqlite+aiosqlite:///spirit_island.db")
 new_session = async_sessionmaker(engine, expire_on_commit=False)

@@ -1,12 +1,16 @@
 import os
 from collections import defaultdict
-from aiogram import Router, types, F
+from random import choice
+
+from aiogram import F, Router, types
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from random import choice
-from sqlalchemy import select, intersect
-from keyboard import item_type, build_keybord
-from database import new_session, SpiritOrm
+from aiogram.fsm.storage.base import StorageKey
+from aiogram.fsm.storage.memory import MemoryStorage
+from sqlalchemy import intersect, select
+
+from database import SpiritOrm, new_session
+from keyboard import build_keybord, choose_mode, item_type
 from states import SpiritStates
 
 media_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
@@ -19,8 +23,29 @@ async def cmd_start(message: types.Message, state: FSMContext):
     if state:
         await state.clear()
         query_params.clear()
-    await state.set_state(SpiritStates.choose_type)
     await message.answer(
+        text='Выберите режим',
+        reply_markup=choose_mode
+    )
+    new_user_storage_key = StorageKey(message.bot.id, message.chat.id, message.chat.id)
+    storage = MemoryStorage()
+    new_user_context = FSMContext(storage=storage, key=new_user_storage_key)
+    await new_user_context.set_state(SpiritStates.start)
+    await state.set_data(data=query_params)
+
+
+@router.callback_query(F.data == 'beginning')
+async def to_the_beginning(callback: types.CallbackQuery, state: FSMContext):
+    await cmd_start(message=callback.message, state=state)
+
+
+@router.callback_query(F.data.endswith('mode'))
+async def set_mode(callback: types.CallbackQuery, state: FSMContext):
+    if callback.data.startswith('random'):
+        await state.set_state(SpiritStates.get_random)
+    else:
+        await state.set_state(SpiritStates.choose_type)
+    await callback.message.answer(
         text='Выберите планшет',
         reply_markup=item_type
     )
@@ -48,87 +73,102 @@ async def get_spirit(query_params: defaultdict[set[str]]):
 
 @router.callback_query(F.data.endswith('Готово'))
 async def get_photo(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
     if (
-        'дух' in query_params['type']
+        'дух' in data['type']
         and await state.get_state() == SpiritStates.choose_expansions
     ):
         await state.set_state(SpiritStates.choose_difficulty)
         await callback.message.answer(
             text='Выберите сложность',
             reply_markup=build_keybord(
-                query_params=query_params,
+                query_params=data,
                 stage='difficulty'
             ).as_markup()
         )
     else:
-        await state.set_state(SpiritStates.get_spirit)
-        photo = await get_spirit(query_params=query_params)
+        photo = await get_spirit(query_params=data)
         if not photo:
             await callback.message.answer(
                 'Упс, по заданным параметрам ничего не нашлось'
             )
         else:
             await callback.message.answer_photo(photo)
-        query_params.clear()
-        await cmd_start(message=callback.message, state=state)
+        data.clear()
+        await state.set_data(data)
+        await callback.message.answer(
+            text='Выберите планшет',
+            reply_markup=item_type
+        )
 
 
 @router.callback_query(
-        StateFilter(SpiritStates.choose_type), F.data.startswith('get_')
+        F.data.startswith('get_')
     )
 async def choose_type(callback: types.CallbackQuery, state: FSMContext):
-    query_params['type'].add(callback.data.lstrip('get_'))
-    await state.set_state(SpiritStates.choose_expansions)
-    await callback.message.answer(
-        'Выберите используемые дополнения',
-        reply_markup=build_keybord(
-            query_params=query_params,
-            stage='source'
-        ).as_markup()
-    )
+    data = await state.get_data()
+    data['type'].add(callback.data.lstrip('get_'))
+    await state.set_data(data)
+    if await state.get_state() == SpiritStates.get_random:
+        await get_photo(callback=callback, state=state)
+    else:
+        await state.set_state(SpiritStates.choose_expansions)
+        await callback.message.answer(
+            'Выберите используемые дополнения',
+            reply_markup=build_keybord(
+                query_params=data,
+                stage='source'
+            ).as_markup()
+        )
 
 
 @router.callback_query(
         StateFilter(SpiritStates.choose_expansions), F.data.startswith('sou_')
     )
 async def choose_expansions(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
     if callback.data == 'sou_Отметить всё':
         await callback.message.edit_reply_markup(
             reply_markup=build_keybord(
-                query_params=query_params,
+                query_params=data,
                 stage='source',
                 mark_all=True
             ).as_markup()
         )
-        query_params['source'] = None
-        await get_photo(callback=callback, state=state)
+        data['source'] = None
+        await state.set_data(data)
+        # await get_photo(callback=callback, state=state)
         return
-    query_params['source'].add(callback.data.lstrip('sou_'))
+    data['source'].add(callback.data.lstrip('sou_'))
     await callback.message.edit_reply_markup(
         reply_markup=build_keybord(
-            query_params=query_params,
+            query_params=data,
             stage='source'
         ).as_markup()
     )
+    await state.set_data(data)
 
 
 @router.callback_query(StateFilter(SpiritStates.choose_difficulty))
 async def choose_difficulty(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
     if callback.data == 'dif_Любая':
         await callback.message.edit_reply_markup(
             reply_markup=build_keybord(
-                query_params,
+                data,
                 stage='difficulty',
                 mark_all=True
             ).as_markup()
         )
-        query_params['difficulty'] = None
+        data['difficulty'] = None
+        await state.set_data(data)
         await get_photo(callback=callback, state=state)
         return
-    query_params['difficulty'].add(callback.data.lstrip('dif_'))
+    data['difficulty'].add(callback.data.lstrip('dif_'))
     await callback.message.edit_reply_markup(
         reply_markup=build_keybord(
-            query_params,
+            data,
             stage='difficulty'
         ).as_markup()
     )
+    await state.set_data({callback.message.chat.id: data})

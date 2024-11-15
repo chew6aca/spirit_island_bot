@@ -1,6 +1,21 @@
+from collections import defaultdict
+
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from collections import defaultdict
+
+choose_mode = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text='Случайные планшеты', callback_data='random_mode'
+            ),
+            InlineKeyboardButton(
+                text='Задать параметры', callback_data='with_params_mode'
+            )
+        ]
+    ]
+
+)
 
 item_type = InlineKeyboardMarkup(
     inline_keyboard=[
@@ -13,6 +28,9 @@ item_type = InlineKeyboardMarkup(
             ),
             InlineKeyboardButton(
                 text='Сценарий', callback_data='get_сценарий'
+            ),
+            InlineKeyboardButton(
+                text='В начало', callback_data='beginning'
             )
         ]
     ]

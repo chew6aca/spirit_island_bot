@@ -1,8 +1,9 @@
-import json
-from database import engine, SpiritOrm, create_tables
-from sqlalchemy import insert
 import asyncio
+import json
 
+from sqlalchemy import insert
+
+from database import SpiritOrm, create_tables, engine
 
 with open('data/spirits.json', encoding='utf-8') as file:
     spirits = json.load(file)
