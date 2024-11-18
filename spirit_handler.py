@@ -137,7 +137,6 @@ async def choose_expansions(callback: types.CallbackQuery, state: FSMContext):
         )
         data['source'] = None
         await state.set_data(data)
-        # await get_photo(callback=callback, state=state)
         return
     data['source'].add(callback.data.lstrip('sou_'))
     await callback.message.edit_reply_markup(
@@ -162,7 +161,6 @@ async def choose_difficulty(callback: types.CallbackQuery, state: FSMContext):
         )
         data['difficulty'] = None
         await state.set_data(data)
-        await get_photo(callback=callback, state=state)
         return
     data['difficulty'].add(callback.data.lstrip('dif_'))
     await callback.message.edit_reply_markup(
@@ -171,4 +169,4 @@ async def choose_difficulty(callback: types.CallbackQuery, state: FSMContext):
             stage='difficulty'
         ).as_markup()
     )
-    await state.set_data({callback.message.chat.id: data})
+    await state.set_data(data)
