@@ -1,4 +1,6 @@
 import asyncio
+import logging
+
 import os
 
 from aiogram import Bot, Dispatcher
@@ -8,6 +10,10 @@ from dotenv import load_dotenv
 
 import spirit_handler
 
+logging.basicConfig(
+    level=logging.INFO, filename='bot_log.log',
+    format="%(asctime)s %(levelname)s %(message)s"
+    )
 load_dotenv()
 TOKEN = os.getenv('TOKEN')
 dp = Dispatcher(storage=MemoryStorage())

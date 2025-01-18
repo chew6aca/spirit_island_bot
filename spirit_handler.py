@@ -17,10 +17,6 @@ from states import SpiritStates
 media_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
 router = Router()
 query_params = defaultdict(set)
-logging.basicConfig(
-    level=logging.INFO, filename='bot_log.log',
-    format="%(asctime)s %(levelname)s %(message)s"
-    )
 
 @router.message(Command('start'))
 async def cmd_start(message: types.Message, state: FSMContext):
