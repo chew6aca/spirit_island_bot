@@ -1,3 +1,4 @@
+import logging
 import os
 from collections import defaultdict
 from random import choice
@@ -16,7 +17,10 @@ from states import SpiritStates
 media_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
 router = Router()
 query_params = defaultdict(set)
-
+logging.basicConfig(
+    level=logging.INFO, filename='bot_log.log',
+    format="%(asctime)s %(levelname)s %(message)s"
+    )
 
 @router.message(Command('start'))
 async def cmd_start(message: types.Message, state: FSMContext):
@@ -27,6 +31,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
         text='Выберите режим',
         reply_markup=choose_mode
     )
+    logging.info(f'Пользователь {message.chat.username} начал работу с ботом')
     new_user_storage_key = StorageKey(message.bot.id, message.chat.id, message.chat.id)
     storage = MemoryStorage()
     new_user_context = FSMContext(storage=storage, key=new_user_storage_key)
